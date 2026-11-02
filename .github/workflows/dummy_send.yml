@@ -2,9 +2,10 @@ name: Dummy test - send policy reminders
 
 on:
   schedule:
-    # TODAY ONLY (2 Nov): 12:30 UTC = 5:30 PM Pakistan time, 12:40 UTC = 5:40 PM
-    - cron: "30 12 2 11 *"
-    - cron: "40 12 2 11 *"
+    # Every weekday at 14:05 UTC = 7:05 PM Pakistan time (this is the real-project timer)
+    - cron: "5 14 * * 1-5"
+    # One extra test TODAY (2 Nov) at 15:25 UTC = 8:25 PM Pakistan time
+    - cron: "25 15 2 11 *"
   workflow_dispatch:
     inputs:
       mode:
@@ -31,18 +32,12 @@ jobs:
       - name: Run
         env:
           WEBHOOK_PRESTIGE: ${{ secrets.WEBHOOK_PRESTIGE }}
-          SCHEDULE_TIME: ${{ github.event.schedule }}
           MODE: ${{ github.event.inputs.mode }}
           FAKE_DATE: ${{ github.event.inputs.date }}
         run: |
+          # Scheduled runs have no inputs: they send today's policy, and only after 7 PM Pakistan time.
           ARGS=""
-          if [ "$SCHEDULE_TIME" = "30 12 2 11 *" ]; then
-            ARGS="--now --date 2026-11-02"     # 5:30 PM -> Monday, Week 1 policy
-          elif [ "$SCHEDULE_TIME" = "40 12 2 11 *" ]; then
-            ARGS="--now --date 2026-11-03"     # 5:40 PM -> Tuesday, Week 1 policy
-          else
-            if [ "$MODE" = "dry-run" ]; then ARGS="--dry-run"; fi
-            if [ "$MODE" = "send-now" ]; then ARGS="--now"; fi
-            if [ -n "$FAKE_DATE" ]; then ARGS="$ARGS --date $FAKE_DATE"; fi
-          fi
+          if [ "$MODE" = "dry-run" ]; then ARGS="--dry-run"; fi
+          if [ "$MODE" = "send-now" ]; then ARGS="--now"; fi
+          if [ -n "$FAKE_DATE" ]; then ARGS="$ARGS --date $FAKE_DATE"; fi
           python dummy_sender.py $ARGS
